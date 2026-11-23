@@ -1,0 +1,19 @@
+{
+  "name": "slabyard-matrix",
+  "version": "1.0.0",
+  "description": "SlabYardMatrix — 241-Page Concrete Slab Cubic Yards, 80lb/60lb Bag Pallet, Rebar Grid, Sonotube Footing & Driveway Gravel Tonnage Matrix",
+  "scripts": {
+    "seed": "node src/seed-slab-data.js",
+    "build": "node src/build.js"
+  },
+  "keywords": [
+    "concrete-calculator",
+    "cubic-yards",
+    "80lb-concrete-bags",
+    "gravel-tonnage-calculator",
+    "sonotube-footing",
+    "rebar-grid-calculator"
+  ],
+  "author": "SlabYardMatrix Engineering",
+  "license": "MIT"
+}
