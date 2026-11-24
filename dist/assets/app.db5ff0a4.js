@@ -235,4 +235,154 @@
       });
     }, 35000);
   }
+  // 6. Retention & Dwell-Time Suite: Labor Simulator, BOM Checklist, Share/Print & Saved Binder
+  const simMethod = document.getElementById('sim-method');
+  const simCrew = document.getElementById('sim-crew');
+  const simCrewVal = document.getElementById('sim-crew-val');
+  const simWeight = document.getElementById('sim-weight');
+  const simWater = document.getElementById('sim-water');
+  const simHours = document.getElementById('sim-hours');
+
+  const syncLaborSim = () => {
+    if (!simMethod || !simCrew) return;
+    const bagsTxt = document.getElementById('out-bags80')?.textContent || '45';
+    const bags = Math.max(1, parseInt(bagsTxt.replace(/[^0-9]/g, ''), 10) || 45);
+    const crew = Math.max(1, parseInt(simCrew.value, 10) || 2);
+    if (simCrewVal) simCrewVal.textContent = String(crew);
+    const lbs = bags * 80;
+    const tons = (lbs / 2000).toFixed(2);
+    const waterGal = Math.round(bags * 0.75); // ~3 quarts (0.75 gal) per 80 lb bag
+
+    let mins = 25;
+    if (simMethod.value === 'wheelbarrow') mins = (bags * 7.5) / Math.pow(crew, 0.65);
+    else if (simMethod.value === 'mixer') mins = (bags * 2.4) / Math.pow(crew, 0.55);
+    else mins = Math.max(20, (bags / 45) * 12);
+
+    const hrsStr = mins < 60 ? `${Math.round(mins)} min` : `${(mins / 60).toFixed(1)} hrs`;
+    if (simWeight) simWeight.textContent = `${tons} Tons (${lbs.toLocaleString()} lbs)`;
+    if (simWater) simWater.textContent = `~${waterGal} gal`;
+    if (simHours) simHours.textContent = hrsStr;
+  };
+  if (simMethod && simCrew) {
+    simMethod.addEventListener('change', syncLaborSim);
+    simCrew.addEventListener('input', syncLaborSim);
+    ['inp-length', 'inp-width', 'inp-thickness', 'inp-count', 'inp-waste', 'chk-mono'].forEach(id => {
+      document.getElementById(id)?.addEventListener('input', syncLaborSim);
+      document.getElementById(id)?.addEventListener('change', syncLaborSim);
+    });
+    syncLaborSim();
+  }
+
+  // URL Query Param Hydrator + Copy Share Link + Print
+  const urlParams = new URLSearchParams(window.location.search);
+  ['length', 'width', 'thickness', 'count'].forEach(k => {
+    if (urlParams.has(k)) {
+      const el = document.getElementById('inp-' + k);
+      if (el) { el.value = urlParams.get(k); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+  });
+  document.getElementById('btn-copy-link')?.addEventListener('click', (e) => {
+    const q = new URLSearchParams();
+    ['length', 'width', 'thickness', 'count'].forEach(k => {
+      const v = document.getElementById('inp-' + k)?.value;
+      if (v) q.set(k, v);
+    });
+    const fullUrl = `${window.location.origin}${window.location.pathname}?${q.toString()}`;
+    navigator.clipboard?.writeText(fullUrl).then(() => {
+      e.target.textContent = '✓ Spec Link Copied!';
+      setTimeout(() => { e.target.textContent = '🔗 Copy Shareable Link'; }, 2200);
+    });
+  });
+  document.getElementById('btn-print-sheet')?.addEventListener('click', () => window.print());
+
+  // Interactive BOM Checklist (localStorage per page)
+  const bomRoot = document.getElementById('slab-bom-checklist');
+  if (bomRoot) {
+    const key = 'slabyard-bom:' + window.location.pathname;
+    const rows = Array.from(bomRoot.querySelectorAll('.bom-row'));
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) {}
+    const syncBom = () => {
+      let checked = 0, sum = 0;
+      const next = {};
+      rows.forEach(r => {
+        const id = r.dataset.bomId;
+        const chk = r.querySelector('input[type="checkbox"]');
+        const p = Math.max(0, Number(r.querySelector('.bom-price-input')?.value || 0));
+        sum += p;
+        if (chk?.checked) { checked++; r.classList.add('checked'); } else r.classList.remove('checked');
+        next[id] = { checked: !!chk?.checked, price: p };
+      });
+      const prog = document.getElementById('bom-progress-txt');
+      const tot = document.getElementById('bom-grand-total');
+      if (prog) prog.textContent = `${checked} / ${rows.length} Checked`;
+      if (tot) tot.textContent = `$${sum.toLocaleString()}`;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch (_) {}
+    };
+    rows.forEach(r => {
+      const id = r.dataset.bomId;
+      const chk = r.querySelector('input[type="checkbox"]');
+      const inp = r.querySelector('.bom-price-input');
+      if (saved[id]) {
+        if (chk) chk.checked = !!saved[id].checked;
+        if (inp && typeof saved[id].price === 'number') inp.value = String(saved[id].price);
+      }
+      chk?.addEventListener('change', syncBom);
+      inp?.addEventListener('input', syncBom);
+    });
+    syncBom();
+  }
+
+  // Saved Pours Project Binder Drawer (localStorage site-wide)
+  const BINDER_KEY = 'slabyard-binder-v1';
+  const drawer = document.getElementById('project-binder-drawer');
+  const backdrop = document.getElementById('binder-backdrop');
+  const countEl = document.getElementById('binder-count');
+  const listEl = document.getElementById('binder-items-list');
+  const getBinder = () => { try { return JSON.parse(localStorage.getItem(BINDER_KEY) || '[]'); } catch (_) { return []; } };
+  const setBinder = arr => { try { localStorage.setItem(BINDER_KEY, JSON.stringify(arr)); } catch (_) {} };
+  const renderBinder = () => {
+    const items = getBinder();
+    if (countEl) countEl.textContent = String(items.length);
+    if (!listEl) return;
+    if (!items.length) {
+      listEl.innerHTML = '<p style="font-size:0.84rem;color:var(--text-muted)">No saved pours yet. Click <strong>📌 Save to Project Binder</strong> on any slab, footing, or gravel page to bookmark it for store day.</p>';
+      return;
+    }
+    listEl.innerHTML = items.map((it, i) => `
+      <div class="binder-item">
+        <strong>${it.label}</strong>
+        <div style="font-family:var(--font-mono);margin:4px 0">${it.spec}</div>
+        <div style="font-size:0.74rem;color:var(--text-muted)">${it.date}</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <a href="${it.url}" class="action-pill" style="text-decoration:none">Open →</a>
+          <button type="button" class="action-pill" data-del-binder="${i}">Delete</button>
+        </div>
+      </div>`).join('');
+  };
+  const openDrawer = () => { drawer?.classList.add('open'); backdrop?.classList.add('open'); renderBinder(); };
+  const closeDrawer = () => { drawer?.classList.remove('open'); backdrop?.classList.remove('open'); };
+  document.getElementById('btn-open-binder')?.addEventListener('click', openDrawer);
+  document.getElementById('btn-close-binder')?.addEventListener('click', closeDrawer);
+  backdrop?.addEventListener('click', closeDrawer);
+  document.getElementById('btn-save-pour')?.addEventListener('click', () => {
+    const yards = document.getElementById('out-yards')?.textContent || '';
+    const bags = document.getElementById('out-bags80')?.textContent || document.getElementById('out-gravel')?.textContent || '';
+    const label = window.prompt('Name this saved project (e.g., Backyard Patio, RV Pad):', document.querySelector('h1')?.textContent.slice(0, 38) || 'Concrete Project');
+    if (!label) return;
+    const items = getBinder();
+    items.unshift({ label: label.trim(), spec: `${yards} • ${bags}`, url: window.location.pathname, date: new Date().toLocaleDateString() });
+    setBinder(items.slice(0, 20));
+    renderBinder();
+    openDrawer();
+  });
+  listEl?.addEventListener('click', (e) => {
+    const del = e.target.closest('button[data-del-binder]');
+    if (!del) return;
+    const items = getBinder();
+    items.splice(Number(del.dataset.delBinder), 1);
+    setBinder(items);
+    renderBinder();
+  });
+  renderBinder();
 })();

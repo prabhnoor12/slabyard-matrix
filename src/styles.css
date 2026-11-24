@@ -256,3 +256,64 @@ th { background: var(--surface-alt); font-weight: 700; font-size: 0.82rem; text-
   .layout-grid { display: block; }
   .card, .hero-card { box-shadow: none; border: 1px solid #999; }
 }
+
+/* Retention, Dwell-Time & Comeback Components (Binder, Labor Simulator, BOM) */
+.binder-btn {
+  background: var(--brand); color: #111827; border: 1px solid var(--brand);
+  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 800;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.binder-btn:hover { opacity: 0.92; }
+.action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.action-pill {
+  background: var(--surface-alt); color: var(--text); border: 1px solid var(--border);
+  padding: 6px 11px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+}
+.action-pill:hover { border-color: var(--brand); }
+
+.labor-sim, .bom-checklist {
+  margin-top: 16px; padding: 14px; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--surface-alt);
+}
+.bom-row {
+  display: grid; grid-template-columns: auto 1fr 92px; gap: 10px; align-items: center;
+  padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 0.86rem;
+}
+.bom-row.checked label { text-decoration: line-through; opacity: 0.65; }
+.bom-price-input {
+  width: 100%; padding: 5px 7px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-family: var(--font-mono); text-align: right;
+}
+.bom-total-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 10px; font-family: var(--font-mono); font-weight: 800; font-size: 0.95rem;
+}
+
+.sister-widget {
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: var(--radius); padding: 16px; margin-top: 18px;
+}
+.sister-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; }
+.sister-card {
+  display: block; padding: 11px 12px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface-alt); color: var(--text); font-size: 0.82rem;
+}
+.sister-card:hover { border-color: var(--brand); text-decoration: none; }
+.sister-card strong { display: block; margin-bottom: 3px; font-size: 0.86rem; }
+
+.binder-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 90; display: none; }
+.binder-backdrop.open { display: block; }
+.binder-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(400px, 92vw);
+  background: var(--surface); border-left: 2px solid var(--brand); z-index: 100;
+  padding: 18px; overflow-y: auto; transform: translateX(100%); transition: transform 0.22s ease;
+}
+.binder-drawer.open { transform: translateX(0); }
+.binder-item {
+  border: 1px solid var(--border); background: var(--surface-alt);
+  border-radius: 8px; padding: 10px; margin-bottom: 10px; font-size: 0.84rem;
+}
+@media print {
+  .binder-drawer, .binder-backdrop, .binder-btn, .action-bar, .sister-widget { display: none !important; }
+}

@@ -101,6 +101,7 @@ function renderLayout({ title, description, canonicalPath, breadcrumbs, jsonLdGr
         <input id="quick-jump" type="search" list="slab-pages-list" placeholder="Jump to 10x10, 24x24, 12&quot; Sonotube..." aria-label="Search concrete and gravel calculators">
         ${DATALIST_HTML}
       </search>
+      <button id="btn-open-binder" class="binder-btn" type="button" aria-label="Open saved pours binder">📌 Binder (<span id="binder-count">0</span>)</button>
       <button id="theme-toggle" class="theme-btn" type="button" aria-label="Toggle color theme">🌙 Dark</button>
     </div>
   </header>
@@ -114,6 +115,14 @@ function renderLayout({ title, description, canonicalPath, breadcrumbs, jsonLdGr
       <main>
         <nav class="breadcrumb" aria-label="Breadcrumb">${bcHtml}</nav>
         ${mainHtml}
+        <section class="sister-widget deferred-section" aria-label="Sister Engineering Calculators">
+          <h3 style="margin:0;font-size:0.98rem">🔗 Complete Your Build — Sister Engineering Calculators</h3>
+          <div class="sister-grid">
+            <a class="sister-card" href="https://wiresizematrix.com" rel="noopener"><strong>⚡ WireSizeMatrix.com</strong>Wiring a detached garage, RV pad, or hot tub? Size exact NEC wire gauge &amp; conduit fill →</a>
+            <a class="sister-card" href="https://minisplitbtumatrix.com" rel="noopener"><strong>❄️ MiniSplitBTUMatrix.com</strong>Heating or cooling your garage or pole barn? Size exact mini-split BTU &amp; tonnage →</a>
+            <a class="sister-card" href="https://wattsurgematrix.com" rel="noopener"><strong>🔋 WattSurgeMatrix.com</strong>Running concrete mixers or jobsite tools off-grid? Check generator surge watts →</a>
+          </div>
+        </section>
       </main>
       <aside class="sidebar-col">
         <div class="ad-slot ad-sidebar" data-refresh="true" aria-label="Sidebar Advertisement">
@@ -142,6 +151,16 @@ function renderLayout({ title, description, canonicalPath, breadcrumbs, jsonLdGr
       <p>&copy; 2026 ${SITE_NAME}. Concrete yield standards based on 0.60 cu ft per 80 lb bag (45 bags/yd³), 0.45 cu ft per 60 lb bag (60 bags/yd³), and 1.40 tons/yd³ compacted #57 stone density. Always verify local frost-line depth and ACI 318 structural codes before pouring.</p>
     </div>
   </footer>
+
+  <div class="binder-backdrop" id="binder-backdrop"></div>
+  <aside class="binder-drawer" id="project-binder-drawer" aria-label="Saved Concrete & Gravel Projects Binder">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--brand);padding-bottom:10px;margin-bottom:12px">
+      <strong style="font-family:var(--font-mono)">📌 Saved Pours &amp; Gravel Binder</strong>
+      <button id="btn-close-binder" class="theme-btn" type="button">✕ Close</button>
+    </div>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0">Saved locally in your browser so you can pull up your exact cubic yards, bag pallets &amp; rebar counts at Home Depot or Lowe's.</p>
+    <div id="binder-items-list"></div>
+  </aside>
 
   <div class="ad-mobile-sticky" aria-label="Mobile Sticky Ad">Mobile Adhesion Ad Unit (320×50) — Zero CLS</div>
   <script src="${JS_PATH}" defer></script>
@@ -191,14 +210,58 @@ function renderSlabSvg(l, w, tIn, mono, yards, bags80) {
 }
 
 function renderAffiliateCards(mode, bags80, rebarSticks, gravelTons) {
+  const actionTools = `<div class="action-bar">
+    <button type="button" id="btn-save-pour" class="binder-btn">📌 Save to Project Binder</button>
+    <button type="button" id="btn-copy-link" class="action-pill">🔗 Copy Shareable Link</button>
+    <button type="button" id="btn-print-sheet" class="action-pill">⎙ Print Pour-Day Job Sheet</button>
+  </div>`;
+
+  const laborSim = mode !== 'gravel' ? `<div class="labor-sim" id="labor-simulator">
+    <h3 style="margin:0 0 6px;font-size:0.96rem">🚜 Pour-Day Mix &amp; Wheelbarrow Labor Simulator</h3>
+    <p style="margin:0 0 10px;font-size:0.82rem;color:var(--text-muted)">See how long mixing ${bags80} bags actually takes before deciding between bagged concrete and a ready-mix truck.</p>
+    <div class="calc-grid" style="margin:0 0 10px">
+      <div class="field"><label for="sim-method">Mixing Method</label>
+        <select id="sim-method">
+          <option value="wheelbarrow">Hand-Mix Wheelbarrow (1 bag / 7 min)</option>
+          <option value="mixer" selected>3.5 Cu Ft Electric Barrel Mixer (2 bags / 4 min)</option>
+          <option value="truck">Ready-Mix Concrete Truck Chute (~20 min pour)</option>
+        </select>
+      </div>
+      <div class="field"><label for="sim-crew">Crew Size (Helpers): <strong id="sim-crew-val">2</strong></label><input id="sim-crew" type="range" min="1" max="5" value="2"></div>
+    </div>
+    <div class="kpi-grid" style="margin:0">
+      <div class="kpi-box"><div class="kpi-label">Total Material Weight</div><div class="kpi-val" id="sim-weight">--</div></div>
+      <div class="kpi-box"><div class="kpi-label">Mixing Water Needed</div><div class="kpi-val" id="sim-water">--</div></div>
+      <div class="kpi-box"><div class="kpi-label">Est. Pour / Mix Time</div><div class="kpi-val" id="sim-hours">--</div></div>
+    </div>
+  </div>` : '';
+
+  const bomHtml = mode === 'gravel'
+    ? `<div class="bom-checklist" id="slab-bom-checklist">
+        <h3 style="margin:0 0 6px;font-size:0.96rem">🛒 Driveway &amp; Base Shopping Checklist (Auto-Saved)</h3>
+        <div class="bom-row" data-bom-id="stone"><input type="checkbox" id="bom-stone"><label for="bom-stone"><strong>${gravelTons} Tons Crushed #57 Stone / Crusher Run</strong></label><input class="bom-price-input" type="number" value="${Math.round(gravelTons * 42)}"></div>
+        <div class="bom-row" data-bom-id="haul"><input type="checkbox" id="bom-haul"><label for="bom-haul">Local Dump Truck Delivery &amp; Tailgate Spread Fee</label><input class="bom-price-input" type="number" value="145"></div>
+        <div class="bom-row" data-bom-id="fabric"><input type="checkbox" id="bom-fabric"><label for="bom-fabric">Non-Woven Geotextile Driveway Stabilization Fabric</label><input class="bom-price-input" type="number" value="110"></div>
+        <div class="bom-row" data-bom-id="compactor"><input type="checkbox" id="bom-compactor"><label for="bom-compactor">Vibratory Plate Compactor (4-Hour Rental)</label><input class="bom-price-input" type="number" value="75"></div>
+        <div class="bom-total-bar"><span id="bom-progress-txt">0 / 4 Checked</span><span>Total: <strong id="bom-grand-total">$0</strong></span></div>
+      </div>`
+    : `<div class="bom-checklist" id="slab-bom-checklist">
+        <h3 style="margin:0 0 6px;font-size:0.96rem">🛒 Pour-Day Materials &amp; Hardware Checklist (Auto-Saved)</h3>
+        <div class="bom-row" data-bom-id="concrete"><input type="checkbox" id="bom-concrete"><label for="bom-concrete"><strong>${bags80} × 80 lb High-Strength Concrete Bags (or Ready-Mix)</strong></label><input class="bom-price-input" type="number" value="${Math.round(bags80 * 5.65)}"></div>
+        <div class="bom-row" data-bom-id="rebar"><input type="checkbox" id="bom-rebar"><label for="bom-rebar">${rebarSticks || 12} × 20-ft #4 Grade-60 Rebar Sticks + Tie Wire &amp; Chairs</label><input class="bom-price-input" type="number" value="${(rebarSticks || 12) * 14}"></div>
+        <div class="bom-row" data-bom-id="gravel"><input type="checkbox" id="bom-gravel"><label for="bom-gravel">${gravelTons} Tons #57 Crushed Stone Sub-Base + 6-Mil Poly Vapor Barrier</label><input class="bom-price-input" type="number" value="${Math.round(gravelTons * 45 + 40)}"></div>
+        <div class="bom-row" data-bom-id="forms"><input type="checkbox" id="bom-forms"><label for="bom-forms">2×4 / 2×6 Form Boards, Stakes, Duplex Nails &amp; Control Joint Groover</label><input class="bom-price-input" type="number" value="95"></div>
+        <div class="bom-total-bar"><span id="bom-progress-txt">0 / 4 Checked</span><span>Total: <strong id="bom-grand-total">$0</strong></span></div>
+      </div>`;
+
   if (mode === 'gravel') {
-    return `<div class="affiliate-grid">
+    return `${actionTools}${bomHtml}<div class="affiliate-grid">
       <div class="aff-card"><div><strong>Non-Woven Geotextile Driveway Fabric</strong><p style="font-size:0.84rem;color:var(--text-muted);margin:6px 0">Prevents clay mud from pumping up into your ${gravelTons} tons of crushed stone.</p></div><a class="aff-btn" href="#gravel-checklist">Check Roll Coverage →</a></div>
       <div class="aff-card"><div><strong>Vibratory Plate Compactor Rental</strong><p style="font-size:0.84rem;color:var(--text-muted);margin:6px 0">Compacts 2" lifts to 95% Proctor density so driveway gravel locks tight without rutting.</p></div><a class="aff-btn" href="#gravel-checklist">Compaction Specs →</a></div>
       <div class="aff-card"><div><strong>Local Dump Truck Delivery Quotes</strong><p style="font-size:0.84rem;color:var(--text-muted);margin:6px 0">Bulk quarry delivery saves 55%+ vs buying 50 lb bags at retail.</p></div><a class="aff-btn" href="#gravel-checklist">Compare Bulk Rates →</a></div>
     </div>`;
   }
-  return `<div class="affiliate-grid">
+  return `${actionTools}${laborSim}${bomHtml}<div class="affiliate-grid">
     <div class="aff-card"><div><strong>Quikrete / Sakrete 80 lb High-Strength Mix</strong><p style="font-size:0.84rem;color:var(--text-muted);margin:6px 0">Need ${bags80} bags (${(bags80 / 42).toFixed(1)} pallets). 4,000 PSI structural concrete mix.</p></div><a class="aff-btn" href="#material-bom">View Pallet Pricing →</a></div>
     <div class="aff-card"><div><strong>#4 Grade-60 Rebar &amp; 2" Slab Chairs</strong><p style="font-size:0.84rem;color:var(--text-muted);margin:6px 0">Estimate ${rebarSticks || 12} × 20-ft sticks on 18" O.C. grid with 16-gauge tie wire.</p></div><a class="aff-btn" href="#material-bom">Rebar Spacing Guide →</a></div>
     <div class="aff-card"><div><strong>3.5 Cu Ft Portable Barrel Mixer / Bull Float</strong><p style="font-size:0.84rem;color:var(--text-muted);margin:6px 0">Essential finishing kit for pouring 15 to 90 bags without cold joints.</p></div><a class="aff-btn" href="#material-bom">Pour Day Checklist →</a></div>
