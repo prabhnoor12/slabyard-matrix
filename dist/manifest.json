@@ -1,0 +1,15 @@
+{
+  "name": "SlabYardMatrix — Concrete Cubic Yards, Bags & Gravel Calculator",
+  "short_name": "SlabYard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

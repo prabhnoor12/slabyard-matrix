@@ -74,8 +74,16 @@ function renderLayout({ title, description, canonicalPath, breadcrumbs, jsonLdGr
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <title>${escapeHtml(title)} | ${SITE_NAME}</title>
+  <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeAttr(description)}">
+  <meta name="application-name" content="${SITE_NAME}">
+  <meta property="og:site_name" content="${SITE_NAME}">
+  <meta property="og:title" content="${escapeAttr(title)}">
+  <meta property="og:description" content="${escapeAttr(description)}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.json">
   <link rel="canonical" href="${canonicalUrl}">
   <link rel="expect" href="#hero-panel" blocking="render">
   <link rel="stylesheet" href="${CSS_PATH}">
@@ -372,8 +380,8 @@ for (const s of slabs) {
     </section>`;
 
   const html = renderLayout({
-    title: s.title,
-    description: `Exact concrete calculator for a ${s.lengthFt}x${s.widthFt} ${s.variantType}: ${s.grossCubicYards} cubic yards, ${s.bags80} 80lb bags, ${s.rebarSticks20ft} rebar sticks, and ${s.gravelTons} tons of #57 gravel base.`,
+    title: `${s.lengthFt}x${s.widthFt} Concrete Slab Calculator (${s.thicknessIn}" Thick) [Yards, Bags & Cost]`,
+    description: `Pouring a ${s.lengthFt}x${s.widthFt} ${s.variantType}? Compare 80lb bag pallets (~$${s.bagCost80.toLocaleString()}) vs Ready-Mix Truck (~$${s.readyMixCost.toLocaleString()} w/ short-load fee), exact cubic yards & #4 rebar →`,
     canonicalPath: url,
     breadcrumbs: [{ name: 'Home', url: '/' }, { name: 'Concrete Slabs', url: '/#slabs' }, { name: s.shortLabel, url }],
     jsonLdGraph: [
@@ -689,6 +697,8 @@ const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http:
 writePage('sitemap.xml', sitemapXml);
 writePage('robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}/sitemap.xml\n`);
 writePage('ads.txt', `# Replace pub-0000000000000000 with your Google AdSense Publisher ID\ngoogle.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0\n`);
+writePage('favicon.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#0f172a"/><rect x="4" y="4" width="56" height="56" rx="10" fill="none" stroke="#d97706" stroke-width="3"/><text x="32" y="42" text-anchor="middle" fill="#fbbf24" font-family="monospace,sans-serif" font-size="22" font-weight="900">YD³</text></svg>`);
+writePage('manifest.json', JSON.stringify({ name: 'SlabYardMatrix — Concrete Cubic Yards, Bags & Gravel Calculator', short_name: 'SlabYard', start_url: '/', display: 'standalone', background_color: '#0f172a', theme_color: '#d97706', icons: [{ src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml' }] }, null, 2));
 writePage('_headers', `/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/*\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: SAMEORIGIN\n`);
 writePage('_redirects', `/index.html / 301\n`);
 writePage('.assetsignore', `wrangler.jsonc\nsrc/\n`);
